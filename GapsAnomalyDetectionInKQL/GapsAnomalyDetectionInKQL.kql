@@ -1,0 +1,92 @@
+//
+let is_anomaly = (anomalies:dynamic)
+{
+	// Temporary filter for debugging only; // array_sum(anomalies) < array_length(anomalies)
+	anomalies[-1] == 1
+};
+let get_adjusted_endtime =
+(dt:timespan             = 10m,
+endtime:datetime         = datetime(0001-01-01), 
+window:timespan          = 4h, 	// Tunning param 
+log_latency:timespan     = 55m 	// Time to get latest record
+)
+{
+	iff(endtime == datetime(0001-01-01), bin(now() - log_latency, dt), bin(endtime, dt));
+};
+//
+let detect_anomalies = 
+(table:string,
+dt:timespan,
+time_col:string         = 'Timestamp',
+unique_id_col:string    = 'uniqueColumn',
+endtime:datetime        = datetime(0001-01-01), 
+window:timespan         = 4h,	// Tunning param
+window_records_pct:real = 60.0, // Tunning param
+log_latency:timespan    = 55m,	// Time to get latest record
+lookback:timespan       = 21h) 
+{
+	let window_bins     = toint(window / dt);
+	let actual_lookback = max_of(lookback, dt * window_bins);
+	let etime           = get_adjusted_endtime(dt, endtime, window, log_latency);
+	let stime           = etime - actual_lookback; 
+	let window_records  = window_bins * (window_records_pct / 100.0);
+	//
+	table(table)
+	// Select Items To Filter
+	// | where columnifexists(unique_id_col, "ITEM_NOT_FOUND") in~(items)
+	// Divide to bins of dt
+	| make-series n               = count() on columnifexists(time_col, datetime(0001-01-01)) 
+	from stime to etime step dt by columnifexists(unique_id_col, "ITEM_NOT_FOUND") 
+	// FIR; moving sum of window_bins size
+	| extend rn                   = series_fir(n, repeat(1, window_bins), false)
+	// Anomalies are where fir bins are less than window_records threshold
+	// Anomaly : looking at last 10 min, when looking at last hour (2 missing data, 60% of expected)
+	| extend anomalies            = series_add(series_less_equals(rn, window_records), 0)
+	| extend actual               = toint(rn[-1]), expected = window_bins
+	| where is_anomaly(anomalies) == true 
+};
+let detect_anomalies_debug = 
+(table:string,
+dt:timespan,
+time_col:string         = 'Timestamp',
+unique_id_col:string    = 'uniqueColumn',
+endtime:datetime        = datetime(0001-01-01), 
+window:timespan         = 4h,	// Tunning param
+window_records_pct:real = 60.0, // Tunning param
+log_latency:timespan    = 55m,	// Time to get latest record
+lookback:timespan       = 21h)
+{
+	detect_anomalies(table, dt, time_col, unique_id_col, endtime, window, window_records_pct, log_latency, lookback)
+	| serialize 
+	| extend tsid = strcat('_', row_number(), '_', columnifexists(unique_id_col, "ITEM_NOT_FOUND"))
+	| render anomalychart with(anomalycolumns=anomalies, series=tsid)
+};
+//
+let detect_anomalies_details = 
+(table:string,
+anomaly_type:string,
+dt:timespan,
+time_col:string         = 'Timestamp',
+unique_id_col:string    = 'uniqueColumn',
+endtime:datetime        = datetime(0001-01-01), 
+window:timespan         = 4h,	// Tunning param
+window_records_pct:real = 60.0, // Tunning param
+log_latency:timespan    = 55m,	// Time to get latest record
+lookback:timespan       = 21h)
+{
+	let etime             			  = get_adjusted_endtime(dt, endtime, window, log_latency); 
+	detect_anomalies(table, dt, time_col, unique_id_col, endtime, window, window_records_pct, log_latency, lookback)
+	| order by columnifexists(unique_id_col, "ITEM_NOT_FOUND") asc 
+	| extend	anomaly_type		  = anomaly_type,
+				endtime               = tostring(etime),
+				dt                    = tostring(dt),
+				window                = tostring(window)
+	| project columnifexists(unique_id_col, "ITEM_NOT_FOUND"), anomaly_type, endtime, dt, window, actual, expected
+};
+//
+let endtime             = ago(4h);
+let tableName		    = 'Table';
+let timeColumnName	    = 'TimeColumn';
+let uniqueColumnName	= 'uniqueColumn';
+let window				= 4h;
+detect_anomalies_details(table = tableName, dt=10m, anomaly_type = "Missing", time_col = timeColumnName, unique_id_col = uniqueColumnName, endtime=endtime, window=window);
