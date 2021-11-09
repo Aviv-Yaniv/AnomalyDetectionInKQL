@@ -1,0 +1,7 @@
+{
+  "lookback": "ago(6h)",
+  "tableName": "TableName",
+  "timeColumn": "TimestampColumn",
+  "uniqueColumn": "UniqueIdColumn",
+  "columnNames": "Column1, Column2, Column3"
+}

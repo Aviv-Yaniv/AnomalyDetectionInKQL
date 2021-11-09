@@ -1,0 +1,34 @@
+let build_range_anomaly_details_structured = (metric_name:string, anomaly_description:string, expected:real, actual:real, timestamp:string)
+{
+    pack('metric_name', metric_name, 'anomaly_description', anomaly_description, 'expected', expected, 'actual', actual, 'timestamp', timestamp)
+};
+let is_range_reals_by_stats = (metric_name:string, vec:dynamic, timestamps:dynamic, lower:real = real(-inf), upper:real = real(+inf))
+{
+    let vec_stats = series_stats_dynamic(vec);
+    let min = vec_stats['min'];
+    let max = vec_stats['max'];
+    let min_message = iff(min   < lower, tostring(build_range_anomaly_details_structured(metric_name=metric_name, anomaly_description='below_min', expected=lower, actual=vec_stats['min'], timestamp=tostring(timestamps[toint(vec_stats['min_idx'])]))), '');
+    let max_message = iff(upper < max  , tostring(build_range_anomaly_details_structured(metric_name=metric_name, anomaly_description='above_max', expected=upper, actual=vec_stats['max'], timestamp=tostring(timestamps[toint(vec_stats['max_idx'])]))), '');
+    strcat(iff(min_message == '', '', strcat(min_message, ',')), max_message)
+};
+let in_range_anomaly_reals = (metric_name:string, vec:dynamic, timestamps:dynamic, lower:real = real(-inf), upper:real = real(+inf))
+{
+        let is_no_range_specified = (lower == real(-inf)) and (upper == real(+inf));
+        iff(is_no_range_specified, '', is_range_reals_by_stats(metric_name, vec, timestamps, lower, upper))
+};
+TableName
+| where TimestampColumn > ago(6h)
+| extend pColumn1 = pack_array(Column1) 
+| extend pColumn2 = pack_array(Column2) 
+| extend pColumn3 = pack_array(Column3) 
+| extend pTimestampColumn = pack_array(TimestampColumn) 
+| summarize s_pColumn1 = make_set(pColumn1), 
+		s_pColumn2 = make_set(pColumn2), 
+		s_pColumn3 = make_set(pColumn3), 
+		s_pTimestampColumn = make_set(pTimestampColumn) by UniqueIdColumn
+| extend RangeAnomalyDetails_pColumn1 = in_range_anomaly_reals('Column1', s_pColumn1, s_pTimestampColumn), 
+		RangeAnomalyDetails_pColumn2 = in_range_anomaly_reals('Column2', s_pColumn2, s_pTimestampColumn), 
+		RangeAnomalyDetails_pColumn3 = in_range_anomaly_reals('Column3', s_pColumn3, s_pTimestampColumn)
+| extend AnomaliesNames = strcat(iff(RangeAnomalyDetails_pColumn1 != '', strcat(RangeAnomalyDetails_pColumn1, ','), ''), iff(RangeAnomalyDetails_pColumn2 != '', strcat(RangeAnomalyDetails_pColumn2, ','), ''), iff(RangeAnomalyDetails_pColumn3 != '', strcat(RangeAnomalyDetails_pColumn3, ','), ''), '')
+| where AnomaliesNames != ''
+| project UniqueIdColumn, AnomaliesNames, currentTime=now(), lookback=ago(6h)
