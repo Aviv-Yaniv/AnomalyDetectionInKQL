@@ -63,6 +63,13 @@ detect_anomalies_details(table = tableName, dt=10m, anomaly_type = "Missing", ti
 ## Range Anomaly Detection In KQL
 In case we want to check if ranges are below or above certain value.
 
+```
+// You can keep range validation it as is, if no validation is required (and no redundant calculation will occur)
+| extend RangeAnomalyDetails_pColumn1 = in_range_anomaly_reals('Column1', s_pColumn1, s_pTimestampColumn)
+// Or pass lower and upper parameters (or either pass just one of them) if validation is required
+| extend RangeAnomalyDetails_pColumn1 = in_range_anomaly_reals('Column1', s_pColumn1, s_pTimestampColumn, lower = 0, upper = 100)
+```
+
 <!-- CONTACT -->
 ## Contact
 
