@@ -52,10 +52,10 @@ gaps might occur because of a transient network issue of the input source to the
 
 ```
 let endtime           = ago(4h);
-let tableName		      = 'Table';
-let timeColumnName	  = 'TimeColumn';
-let uniqueColumnName	= 'uniqueColumn';
-let window				    = 4h;
+let tableName         = 'Table';
+let timeColumnName    = 'TimeColumn';
+let uniqueColumnName  = 'uniqueColumn';
+let window            = 4h;
 detect_anomalies_details(table = tableName, dt=10m, anomaly_type = "Missing", time_col = timeColumnName, unique_id_col = uniqueColumnName, endtime=endtime, window=window)
 ```
 
