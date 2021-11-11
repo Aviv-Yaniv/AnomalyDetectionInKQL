@@ -28,7 +28,7 @@
 
 Anomaly Detection Tool Covers the Following Scenarios; <br> 
 1) Gaps Anomaly Detection : When tables should have row each `dt` time, and we want to discover missing rows <br>
-2) Range Anomaly Detection : When specific column should have values withing a given range, and we are interested at what time invalid values is reported (e.g. negative `CPU` due to overflow) <br>
+2) Range Anomaly Detection : When specific column should have values within a given range, and we are interested at what time invalid values is reported (e.g. negative `CPU` due to overflow) <br>
 
 After successful demonstration in multiple use cases that discovered edge cases and saved manual work, and interest from outside of the team, we release this tool so you can benefit from it too. 
 
@@ -56,7 +56,8 @@ let tableName         = 'Table';
 let timeColumnName    = 'TimeColumn';
 let uniqueColumnName  = 'uniqueColumn';
 let window            = 4h;
-detect_anomalies_details(table = tableName, dt=10m, anomaly_type = "Missing", time_col = timeColumnName, unique_id_col = uniqueColumnName, endtime=endtime, window=window)
+let threshold         = 90.0;
+detect_anomalies_details(table = tableName, dt = 10m, anomaly_type = "Missing", time_col = timeColumnName, unique_id_col = uniqueColumnName, endtime = endtime, window = window, window_records_pct = threshold)
 ```
 
 <!-- RANGE ANOMALY DETECTION IN KQL -->
