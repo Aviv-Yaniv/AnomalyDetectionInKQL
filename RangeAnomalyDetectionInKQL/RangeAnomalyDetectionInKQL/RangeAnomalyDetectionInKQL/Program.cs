@@ -65,7 +65,7 @@ let in_range_anomaly_reals = (metric_name:string, vec:dynamic, timestamps:dynami
         {
             StringBuilder sbColumnPacks = new StringBuilder();
             sbColumnPacks.Append("| summarize ");
-            sbColumnPacks.Append(string.Join(", \n\t\t", columnNames.Select(columnName => $"{GetColumnPackSummarizedName(columnName)} = make_set({GetColumnPackName(columnName)})")));
+            sbColumnPacks.Append(string.Join(", \n\t\t", columnNames.Select(columnName => $"{GetColumnPackSummarizedName(columnName)} = make_list({GetColumnPackName(columnName)})")));
             sbColumnPacks.Append($" by {uniqueColumn}\n");
             return sbColumnPacks.ToString();
         }
