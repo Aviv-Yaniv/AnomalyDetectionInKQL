@@ -22,10 +22,10 @@ TableName
 | extend pColumn2 = pack_array(Column2) 
 | extend pColumn3 = pack_array(Column3) 
 | extend pTimestampColumn = pack_array(TimestampColumn) 
-| summarize s_pColumn1 = make_set(pColumn1), 
-		s_pColumn2 = make_set(pColumn2), 
-		s_pColumn3 = make_set(pColumn3), 
-		s_pTimestampColumn = make_set(pTimestampColumn) by UniqueIdColumn
+| summarize s_pColumn1 = make_list(pColumn1), 
+		s_pColumn2 = make_list(pColumn2), 
+		s_pColumn3 = make_list(pColumn3), 
+		s_pTimestampColumn = make_list(pTimestampColumn) by UniqueIdColumn
 | extend RangeAnomalyDetails_pColumn1 = in_range_anomaly_reals('Column1', s_pColumn1, s_pTimestampColumn), 
 		RangeAnomalyDetails_pColumn2 = in_range_anomaly_reals('Column2', s_pColumn2, s_pTimestampColumn), 
 		RangeAnomalyDetails_pColumn3 = in_range_anomaly_reals('Column3', s_pColumn3, s_pTimestampColumn)
